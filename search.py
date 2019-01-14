@@ -4,50 +4,34 @@ Created on Sun Jan 13 12:00:23 2019
 @author: bnsmith3
 """
 
-from TwitterSearch import *
+from twarc import Twarc
 import configparser
-from time import sleep
 import argparse
 import pickle
 
 
 config = configparser.ConfigParser()
 config.read('config.cfg')
-SLEEP_TIME = 30 #seconds
-QUERY_BLOCK_SIZE = 5
 
 def get_tweets(terms, or_terms=True):
-    try:
-        tso = TwitterSearchOrder()
-        tso.set_keywords(terms, or_operator=or_terms)
-    
-        ts = TwitterSearch(
+    try:    
+        ts = Twarc(
                 consumer_key = config['twitter']['consumer_key'],
                 consumer_secret = config['twitter']['consumer_secret'],
                 access_token = config['twitter']['access_token'],
                 access_token_secret = config['twitter']['access_token_secret']
             )
-        
-        def my_callback_closure(current_ts_instance): # accepts ONE argument: an instance of TwitterSearch
-            queries, tweets_seen = current_ts_instance.get_statistics()
-            if queries > 0 and (queries % QUERY_BLOCK_SIZE) == 0: # trigger delay every query block
-                sleep(SLEEP_TIME)
+
+        if or_terms:
+            search_string = ' OR '.join(terms)
+        else:
+            search_string = ' '.join(terms)
+        all_tweets = list(ts.search(search_string))
     
-        all_tweets = list(ts.search_tweets_iterable(tso, callback=my_callback_closure))
-    
-    except TwitterSearchException as e: # take care of all those ugly errors if there are some
+    except Exception as e: # take care of all those ugly errors if there are some
         print(e)
         
     return all_tweets
-
-def print_tweets(terms, or_terms=True):      
-    all_tweets = get_tweets(terms, or_terms)
-    for tweet in all_tweets:
-        print('@{} tweeted: {} at {}'.format(tweet['user']['screen_name'], \
-              tweet['text'].encode('utf-8'), tweet['created_at']))
-        
-    print('{:,} tweets were printed.'.format(len(all_tweets)))
-    return
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('Grab tweets via the Twitter API'))
