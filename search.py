@@ -33,6 +33,27 @@ def get_tweets(terms, or_terms=True):
         
     return all_tweets
 
+def get_user_tweets(user_id=None, screen_name=None):
+    try:    
+        ts = Twarc(
+                consumer_key = config['twitter']['consumer_key'],
+                consumer_secret = config['twitter']['consumer_secret'],
+                access_token = config['twitter']['access_token'],
+                access_token_secret = config['twitter']['access_token_secret']
+            )
+
+        if user_id:
+            all_tweets = list(ts.timeline(user_id=user_id))
+        elif screen_name:
+            all_tweets = list(ts.timeline(screen_name=screen_name))
+        else:
+            all_tweets = []
+    
+    except Exception as e: # take care of all those ugly errors if there are some
+        print(e)
+        
+    return all_tweets
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=('Grab tweets via the Twitter API'))
     group = parser.add_mutually_exclusive_group(required=True)
@@ -42,8 +63,12 @@ if __name__ == '__main__':
     group.add_argument('--terms_file', '-tf', action='store',
                         help='The file that holds the terms to be '
                         'searched. Each line holds one term.')
+    group.add_argument('--screen_name', '-s', action='store',
+                        help='The username of a user whose tweets to retrieve.')
+    group.add_argument('--user_id', '-u', action='store',
+                        help='The user ID of a user whose tweets to retrieve.')    
     parser.add_argument('--tweets_file', '-f', action='store', required=True,
-                        help='The pickle file to which to write the retrieved tweets.')
+                        help='The pickle file to which to write the list of retrieved tweets.')
     parser.add_argument('--or_terms', '-o', action='store_true',
                         help='Include this flag if multiple terms should be ORed.'
                         'The default is that the terms will be ANDed.')
@@ -52,6 +77,10 @@ if __name__ == '__main__':
     
     if args.term:
         tweets = get_tweets(args.term, args.or_terms)
+    elif args.screen_name:
+        tweets = get_user_tweets(screen_name=args.screen_name)
+    elif args.user_id:
+        tweets = get_user_tweets(user_id=args.user_id)
     else:
         with open(args.terms_file, 'r') as f:
             terms = list(map(lambda x: x.strip(), f.readlines()))
